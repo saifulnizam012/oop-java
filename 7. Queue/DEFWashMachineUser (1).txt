@@ -1,0 +1,127 @@
+import java.util.*;
+public class DEFWashMachine {
+	public enum Status{
+		FREE,
+		BUSY
+	}
+	static int numCar = 0;
+	static int totalWait = 0;
+	static int totalWork = 0;
+	static int maxWait = 0;
+	static int numService1 = 0;
+	static int numService2 = 0;
+	
+	public static void main(String[] args) {
+		Scanner bh = new Scanner(System.in);
+		Clock carArrival;
+		Queue<Clock> waitQueue = new Queue<Clock>();
+		Queue<Clock> arrivalQueue = new Queue<Clock>();
+		Queue<Integer> serviceQueue = new Queue<Integer>();
+		Status machineWash;
+		
+		Clock totalWaitTime = new Clock();
+		Clock maxWaitTime = new Clock();
+		Clock totalServiceTime = new Clock();
+		Clock startTime = new Clock();
+		Clock endTime = new Clock();
+		Clock washEnd = new Clock();
+		Clock washStart = new Clock();
+		
+		Clock i;
+		int nextArrival = 0;
+		Random rand = new Random();
+		
+		startTime.setTime(8, 0, 0);
+		endTime.setTime(8, 30, 0);
+		
+		i = startTime.getCopy();
+		int x = 0;
+		
+		while (x <= 30 && bh.hasNextInt()) {
+			nextArrival = bh.nextInt();
+			i.addTimeMinute(nextArrival);
+			x += nextArrival;
+			if(i.lessThan(endTime)) {
+				arrivalQueue.enqueue(i.getCopy());
+				int service = bh.nextInt();
+				serviceQueue.enqueue(service);
+			}
+		}
+		
+		machineWash = Status.FREE;
+		
+		if(!arrivalQueue.isEmpty()) {
+			startTime = arrivalQueue.peek();
+			washEnd = startTime.getCopy();
+			int service = serviceQueue.peek();
+			if(service == 1) { 
+				washEnd.addTimeMinute(6);
+			} else if (service == 2) {
+				washEnd.addTimeMinute(10);
+			}
+		} else {
+			startTime = endTime.getCopy();
+		}
+		
+		Clock del;
+		for(i = startTime; (i.lessThan(endTime) || !waitQueue.isEmpty() || !arrivalQueue.isEmpty()); ) {
+			
+			if(!arrivalQueue.isEmpty()) {
+				if(i.equalTime(arrivalQueue.peek())) {
+					waitQueue.enqueue(i.getCopy());
+					del = arrivalQueue.dequeue();
+				}
+			}
+			
+			if((machineWash == Status.BUSY) && (i.equalTime(washEnd))) {
+				washEnd.setTime(14, 0, 0);
+				machineWash = Status.FREE;
+			}
+			
+			if((machineWash == Status.FREE) && (!waitQueue.isEmpty())) {
+				washStart = i.getCopy();
+				washEnd = i.getCopy();
+				int service = serviceQueue.dequeue();
+				if(service == 1) { 
+					numService1++;
+					washEnd.addTimeMinute(6);
+				} else if (service == 2) {
+					numService2++;
+					washEnd.addTimeMinute(10);
+				}
+				Analyze(i, waitQueue.peek(), washEnd);
+				del = waitQueue.dequeue();
+				machineWash = Status.BUSY;
+			}
+			
+			if(!arrivalQueue.isEmpty()) {
+				if(washEnd.lessThan(arrivalQueue.peek())) {
+					i = washEnd.getCopy();
+				} else {
+					i = arrivalQueue.peek().getCopy();
+				}
+			} else {
+				i = washEnd.getCopy();
+			}
+		}
+
+		System.out.println("Total Customer: " + numCar);
+		System.out.println("Number of customers for service of type 1: " + numService1);
+		System.out.println("Number of customers for service of type 2: " + numService2);
+		System.out.println("Longest waiting time: " + maxWait + " minutes");
+		System.out.println(String.format("Average waiting time: %.2f minutes", totalWait/(float)numCar));
+	}
+	
+	public static void Analyze(Clock waitStop, Clock start, Clock washStop) {
+		int carWait, machineWork;
+		
+		carWait = start.durationSec(waitStop.getCopy());
+		machineWork = waitStop.durationSec(washStop.getCopy());
+		numCar++;
+		totalWait += carWait;
+		totalWork += machineWork;
+		if (maxWait < carWait) {
+			maxWait = carWait;
+		}
+	}
+}
